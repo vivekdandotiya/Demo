@@ -1,517 +1,393 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { SITE_CONFIG, Service } from '../../config/site'
+import React, { useState, useEffect, useRef } from 'react'
+import { SERVICES_CONTENT, ServiceItem } from '../../content/services'
 import { PHOTOS } from '../../assets/photos'
+import { Button } from '../ui/Button'
+import { scrollToTarget } from '../../lib/lenis'
+import { gsap } from '../../lib/gsap'
+import { Check, ChevronDown } from 'lucide-react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
-import { gsap, ScrollTrigger } from '../../lib/gsap'
-import { getLenis } from '../../lib/lenis'
-import { SeoSearchDemo } from './services/SeoSearchDemo'
-import { PaidAdvertisingDemo } from './services/PaidAdvertisingDemo'
-import { SocialMediaDemo } from './services/SocialMediaDemo'
-import { ContentStrategyDemo } from './services/ContentStrategyDemo'
-import { BrandGrowthDemo } from './services/BrandGrowthDemo'
-import { ConversionCroDemo } from './services/ConversionCroDemo'
 
-const CHAPTER_PHOTOS: Record<string, string> = {
-  'seo-search': PHOTOS['analytics-dashboard'],
-  'paid-advertising': PHOTOS['billboard-city'],
-  'social-media': PHOTOS['camera-operator'],
-  'content-strategy': PHOTOS['whiteboard-session'],
-  'brand-growth': PHOTOS['hands-craft'],
-  'conversion-optimization': PHOTOS['design-laptop'],
+interface ServicesProps {
+  onQuoteService?: (serviceName: string) => void
 }
 
-export const Services: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const pinTrackRef = useRef<HTMLDivElement>(null)
+export const Services: React.FC<ServicesProps> = ({ onQuoteService }) => {
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+  const [mobileOpenIdx, setMobileOpenIdx] = useState<number | null>(0)
+
+  const activeService = SERVICES_CONTENT[activeIndex]
   const prefersReduced = useReducedMotion()
 
-  const [activeChapter, setActiveChapter] = useState(0)
-  const [scrollProgress, setScrollProgress] = useState(0)
-  const [mobileActiveMap, setMobileActiveMap] = useState<Record<number, boolean>>({})
+  const panelRef = useRef<HTMLDivElement>(null)
+  const photoRef = useRef<HTMLImageElement>(null)
+  const photoWrapperRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const progressBarRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const progressTweenRef = useRef<gsap.core.Tween | null>(null)
 
-  const services = SITE_CONFIG.services
-
-  const handleAdvanceChapter = () => {
-    const container = containerRef.current
-    if (!container) return
-    const totalChapters = services.length
-    const nextIdx = Math.min(totalChapters - 1, activeChapter + 1)
-    const lenis = getLenis()
-    const rect = container.getBoundingClientRect()
-    const targetScroll = window.scrollY + rect.top + (nextIdx / totalChapters) * (container.offsetHeight - window.innerHeight)
-    if (lenis) {
-      lenis.scrollTo(targetScroll, { duration: 0.8 })
-    } else {
-      window.scrollTo({ top: targetScroll, behavior: 'smooth' })
-    }
-  }
-
-  const handleJumpToChapter = (idx: number) => {
-    const container = containerRef.current
-    if (!container) return
-    const totalChapters = services.length
-    const lenis = getLenis()
-    const rect = container.getBoundingClientRect()
-    const targetScroll = window.scrollY + rect.top + (idx / totalChapters) * (container.offsetHeight - window.innerHeight)
-    if (lenis) {
-      lenis.scrollTo(targetScroll, { duration: 0.9 })
-    } else {
-      window.scrollTo({ top: targetScroll, behavior: 'smooth' })
-    }
-  }
-
-  // Desktop ScrollTrigger Pinning
+  // 7s Auto-advance with progress bar (paused on hover, focus, manual selection)
   useEffect(() => {
-    if (prefersReduced || typeof window === 'undefined') return
-
-    const container = containerRef.current
-    const pinTrack = pinTrackRef.current
-    if (!container || !pinTrack) return
-
-    // Only enable desktop pinning on screens >= 900px
-    const mm = gsap.matchMedia()
-
-    mm.add('(min-width: 900px)', () => {
-      const totalChapters = services.length
-
-      const st = ScrollTrigger.create({
-        trigger: container,
-        start: 'top top',
-        end: `+=${totalChapters * 100}%`,
-        pin: pinTrack,
-        pinSpacing: true,
-        scrub: 0.6,
-        onUpdate: (self) => {
-          const prog = self.progress
-          setScrollProgress(prog)
-          const newIdx = Math.min(totalChapters - 1, Math.floor(prog * totalChapters))
-          setActiveChapter(newIdx)
-        },
-      })
-
-      return () => {
-        st.kill()
-      }
-    })
-
-    return () => {
-      mm.revert()
-    }
-  }, [prefersReduced, services.length])
-
-  // Mobile IntersectionObserver for individual chapter activation
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const cards = document.querySelectorAll('.mobile-chapter-card')
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const idx = Number(entry.target.getAttribute('data-chapter-index'))
-          if (!isNaN(idx)) {
-            setMobileActiveMap((prev) => ({
-              ...prev,
-              [idx]: entry.isIntersecting,
-            }))
-          }
-        })
-      },
-      { threshold: 0.3 }
-    )
-
-    cards.forEach((card) => observer.observe(card))
-
-    return () => observer.disconnect()
-  }, [])
-
-  // Jump directly to chapter
-  const jumpToChapter = (idx: number) => {
-    if (prefersReduced || window.innerWidth < 900) {
-      const el = document.getElementById(`service-chapter-${idx}`)
-      el?.scrollIntoView({ behavior: 'smooth' })
+    if (prefersReduced || isPaused) {
+      if (progressTweenRef.current) progressTweenRef.current.pause()
       return
     }
 
-    const container = containerRef.current
-    if (!container) return
-    const totalChapters = services.length
-    const rect = container.getBoundingClientRect()
-    const containerTop = window.scrollY + rect.top
-    const pinDistance = window.innerHeight * totalChapters
-    const targetScroll = containerTop + (idx / totalChapters) * pinDistance + 10
+    const bar = progressBarRef.current
+    if (bar) {
+      gsap.set(bar, { scaleX: 0, transformOrigin: 'left center' })
+      progressTweenRef.current = gsap.to(bar, {
+        scaleX: 1,
+        duration: 7,
+        ease: 'none',
+        onComplete: () => {
+          setActiveIndex((prev) => (prev + 1) % SERVICES_CONTENT.length)
+        },
+      })
+    }
 
-    const lenis = getLenis()
-    if (lenis) {
-      lenis.scrollTo(targetScroll, { duration: 1.2 })
-    } else {
-      window.scrollTo({ top: targetScroll, behavior: 'smooth' })
+    return () => {
+      if (progressTweenRef.current) progressTweenRef.current.kill()
+    }
+  }, [activeIndex, isPaused, prefersReduced])
+
+  // Transition animation when activeIndex changes
+  useEffect(() => {
+    if (prefersReduced || typeof window === 'undefined') return
+
+    const photoWrapper = photoWrapperRef.current
+    const photo = photoRef.current
+    const content = contentRef.current
+
+    if (!photoWrapper || !photo || !content) return
+
+    const ctx = gsap.context(() => {
+      // Photo clip-path wipe from bottom + inner scale 1.15 to 1
+      gsap.fromTo(
+        photoWrapper,
+        { clipPath: 'inset(100% 0% 0% 0%)' },
+        { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.7, ease: 'power3.inOut' }
+      )
+      gsap.fromTo(
+        photo,
+        { scale: 1.15 },
+        { scale: 1, duration: 0.75, ease: 'power3.out' }
+      )
+
+      // Content text rising out of mask
+      const textElements = content.querySelectorAll('.panel-reveal')
+      gsap.fromTo(
+        textElements,
+        { y: 18, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.55, stagger: 0.06, ease: 'power3.out' }
+      )
+    }, panelRef)
+
+    return () => ctx.revert()
+  }, [activeIndex, prefersReduced])
+
+  const handleSelectService = (idx: number) => {
+    setActiveIndex(idx)
+    setIsPaused(true) // pause auto-advance on manual user selection
+  }
+
+  // Keyboard navigation across tablist (Up/Down, Home/End)
+  const handleKeyDown = (e: React.KeyboardEvent, idx: number) => {
+    const total = SERVICES_CONTENT.length
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const next = (idx + 1) % total
+      handleSelectService(next)
+      document.getElementById(`service-tab-${next}`)?.focus()
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      const prev = (idx - 1 + total) % total
+      handleSelectService(prev)
+      document.getElementById(`service-tab-${prev}`)?.focus()
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      handleSelectService(0)
+      document.getElementById(`service-tab-0`)?.focus()
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      handleSelectService(total - 1)
+      document.getElementById(`service-tab-${total - 1}`)?.focus()
     }
   }
 
-  // Render the demo for a given service index
-  const renderDemo = (idx: number, isActive: boolean) => {
-    switch (idx) {
-      case 0:
-        return <SeoSearchDemo isActive={isActive} isReducedMotion={prefersReduced} />
-      case 1:
-        return <PaidAdvertisingDemo isActive={isActive} isReducedMotion={prefersReduced} />
-      case 2:
-        return <SocialMediaDemo isActive={isActive} isReducedMotion={prefersReduced} />
-      case 3:
-        return <ContentStrategyDemo isActive={isActive} isReducedMotion={prefersReduced} />
-      case 4:
-        return <BrandGrowthDemo isActive={isActive} isReducedMotion={prefersReduced} />
-      case 5:
-        return <ConversionCroDemo isActive={isActive} isReducedMotion={prefersReduced} />
-      default:
-        return null
-    }
+  const handleQuoteClick = (service: ServiceItem) => {
+    onQuoteService?.(service.name)
+    scrollToTarget('#contact')
+    setTimeout(() => {
+      const nameInput = document.getElementById('contact-name')
+      nameInput?.focus()
+    }, 400)
   }
 
   return (
     <section
       id="services"
-      ref={containerRef}
-      className="relative bg-[#08080A] text-[#F1ECE2] hairline-b"
-      aria-label="Services Chapters"
+      className="relative w-full py-14 md:py-16 bg-[#F3F0E8] text-[#0C0D0F] on-paper z-20"
+      aria-labelledby="services-heading"
     >
-      {/* ========================================================
-          DESKTOP VIEW (>= 900px): PINNED CHAPTER FILM RUN
-          ======================================================== */}
-      {!prefersReduced ? (
-        <div className="services-desktop-stage">
-          <div ref={pinTrackRef} className="h-screen w-full flex flex-col justify-between p-8 lg:p-12 overflow-hidden">
-            {/* Stage Header */}
-            <div className="flex items-end justify-between border-b border-white/10 pb-4">
-              <div>
-                <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] text-[#9C978E] mb-1">
-                  <span className="w-2 h-2 rounded-full bg-[#FF3B1F] animate-pulse" />
-                  <span>SIGNATURE 02 // SERVICE CHAPTERS</span>
-                </div>
-                <h2 className="font-display text-4xl lg:text-5xl text-[#F1ECE2] tracking-tight">
-                  Six instruments. <span className="italic">Zero noise.</span>
-                </h2>
-              </div>
+      <div className="max-w-7xl mx-auto px-6 md:px-10">
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-10 gap-4">
+          <div>
+            <span className="font-body text-xs font-semibold uppercase tracking-[0.08em] text-[#5A584F] block mb-1.5">
+              Capabilities & Working Services
+            </span>
+            <h2
+              id="services-heading"
+              className="font-display font-extrabold text-3xl sm:text-4xl md:text-5xl text-[#0C0D0F] tracking-tight leading-tight"
+            >
+              Services designed for revenue.
+            </h2>
+          </div>
 
-              <div className="flex items-center gap-4 font-mono text-xs text-[#9C978E]">
-                <span>CHAPTER {String(activeChapter + 1).padStart(2, '0')} / 06</span>
-                <span className="text-[#FF3B1F]">● LIVE RUNNING</span>
-              </div>
-            </div>
+          <p className="font-body text-sm md:text-base text-[#5A584F] max-w-md">
+            Click any discipline below to view exact deliverables, strategic focus, and production workflows.
+          </p>
+        </div>
 
-            {/* Pinned Stage Body (Left Rail + Left Text + Right Stage) */}
-            <div className="flex-1 grid grid-cols-12 gap-8 items-center py-6 min-h-0">
-              {/* Left Rail: Slim Vertical Progress Line */}
-              <div className="col-span-1 flex flex-col items-center justify-between h-[380px] relative">
-                {/* Background track line */}
-                <div className="absolute top-2 bottom-2 left-1/2 -translate-x-1/2 w-[2px] bg-white/10 rounded-full" />
-                {/* Active fill line */}
-                <div
-                  className="absolute top-2 left-1/2 -translate-x-1/2 w-[2px] bg-[#FF3B1F] rounded-full transition-all duration-300 ease-out"
-                  style={{
-                    height: `${Math.max(6, scrollProgress * 100)}%`,
-                  }}
-                />
-
-                {/* 6 Chapter Index Buttons */}
-                {services.map((svc, idx) => {
-                  const isActive = activeChapter === idx
-                  return (
-                    <button
-                      key={svc.id}
-                      type="button"
-                      onClick={() => jumpToChapter(idx)}
-                      aria-label={`Jump to chapter ${svc.number}: ${svc.title}`}
-                      aria-current={isActive ? 'step' : undefined}
-                      className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs transition-all duration-300 focus-visible:outline-2 focus-visible:outline-[#FF3B1F] ${
-                        isActive
-                          ? 'bg-[#FF3B1F] text-white font-bold scale-110 shadow-[0_0_15px_rgba(255,59,31,0.5)]'
-                          : 'bg-[#101013] text-[#9C978E] border border-white/10 hover:border-white/30 hover:text-white'
-                      }`}
-                    >
-                      {svc.number}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Left Column: Chapter Description & Deliverables */}
-              <div className="col-span-5 flex flex-col justify-center pr-4">
-                {services.map((svc, idx) => {
-                  if (activeChapter !== idx) return null
-
-                  // Split title to italicize the keyword
-                  const words = svc.title.split(' ')
-                  const isLastItalic = true
-
-                  return (
-                    <div
-                      key={svc.id}
-                      className="animate-in fade-in duration-500 flex flex-col gap-5"
-                    >
-                      <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.16em] text-[#9C978E]">
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: svc.color }} />
-                        <span>CAPABILITY {svc.number} // SPECIFICATION</span>
-                      </div>
-
-                      <h3 className="font-display text-4xl lg:text-6xl text-[#F1ECE2] leading-[1.05] tracking-tight">
-                        {words.map((w, wIdx) => {
-                          const isItalic = isLastItalic && (w === svc.italicWord || wIdx === words.length - 1)
-                          return (
-                            <span key={wIdx} className={isItalic ? 'italic font-normal text-[#FF3B1F]' : ''}>
-                              {w}{' '}
-                            </span>
-                          )
-                        })}
-                      </h3>
-
-                      <p className="font-body text-base lg:text-lg text-[#F1ECE2]/80 leading-relaxed font-light">
-                        "{svc.shortPromise}"
-                      </p>
-
-                      <div className="pt-4 border-t border-white/10">
-                        <span className="font-mono text-xs uppercase tracking-[0.14em] text-[#9C978E] block mb-3">
-                          CORE DELIVERABLES
-                        </span>
-                        <ul className="space-y-2.5 font-body text-sm text-[#F1ECE2]/90">
-                          {svc.deliverables.map((item, dIdx) => (
-                            <li key={dIdx} className="flex items-start gap-2.5">
-                              <span className="text-[#FF3B1F] font-mono text-xs mt-0.5">✦</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="pt-2">
-                        <a
-                          href={SITE_CONFIG.bookingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.14em] text-[#F1ECE2] hover:text-[#FF3B1F] transition-colors py-2 group"
-                        >
-                          <span className="underline underline-offset-4 decoration-[#FF3B1F]">
-                            Talk about your growth
-                          </span>
-                          <span className="transform group-hover:translate-x-1 transition-transform">→</span>
-                        </a>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Right: Large Visual Stage (~55% width, sharp corners, hairline border) */}
-              <div className="col-span-6 relative h-[420px] lg:h-[480px] rounded-xl hairline-box overflow-hidden bg-[#101013]/90 shadow-2xl">
-                {services.map((svc, idx) => {
-                  const isActive = activeChapter === idx
-                  const photoUrl = CHAPTER_PHOTOS[svc.id]
-
-                  return (
-                    <div
-                      key={svc.id}
-                      className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                        isActive ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
-                      }`}
-                    >
-                      {/* Duotone Background Photo */}
-                      {photoUrl && (
-                        <div
-                          className="absolute inset-0 bg-cover bg-center transition-all duration-1000 transform scale-105"
-                          style={{
-                            backgroundImage: `url(${photoUrl})`,
-                            filter: 'grayscale(100%) contrast(135%) brightness(28%)',
-                          }}
-                        />
-                      )}
-
-                      {/* Studio Scrim Vignette */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#08080A]/95 via-[#08080A]/60 to-[#08080A]/85" />
-
-                      {/* Interactive Animated Demo Layer */}
-                      <div className="relative z-10 w-full h-full p-4 lg:p-6 flex items-center justify-center">
-                        {renderDemo(idx, isActive)}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Bottom Scrubber & Section Indicator */}
-            <div className="flex items-center justify-between border-t border-white/10 pt-3.5 select-none">
-              {/* Left: Refined micro scroll-down cue */}
-              <button
-                type="button"
-                onClick={handleAdvanceChapter}
-                className="flex items-center gap-2.5 px-2.5 py-1 -ml-2.5 rounded-full hover:bg-white/[0.04] transition-all duration-200 group text-left cursor-pointer border border-transparent hover:border-white/10"
-                aria-label="Scroll down to advance to next service chapter"
-              >
-                {/* Micro Mouse / Pill Capsule */}
-                <span 
-                  className="relative w-3.5 h-5 rounded-full border border-white/30 group-hover:border-[#FF3B1F] transition-colors flex items-start justify-center pt-1 bg-white/[0.03] shadow-[0_0_10px_rgba(0,0,0,0.5)]"
-                  aria-hidden="true"
+        {/* ========================================================
+            DESKTOP VIEW (>= 900px): INTERACTIVE SERVICES EXPLORER
+            ======================================================== */}
+        <div
+          className="hidden min-[900px]:grid grid-cols-12 gap-8 items-start"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
+          {/* Left 40% (cols 1-5): Vertical list of 6 services */}
+          <div
+            role="tablist"
+            aria-label="Services list"
+            aria-orientation="vertical"
+            className="col-span-5 flex flex-col divide-y divide-[#0C0D0F]/12 border-y border-[#0C0D0F]/12"
+          >
+            {SERVICES_CONTENT.map((service, idx) => {
+              const isActive = activeIndex === idx
+              return (
+                <button
+                  key={service.id}
+                  id={`service-tab-${idx}`}
+                  role="tab"
+                  type="button"
+                  aria-selected={isActive}
+                  aria-controls={`service-panel-${idx}`}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => handleSelectService(idx)}
+                  onKeyDown={(e) => handleKeyDown(e, idx)}
+                  className={`group relative py-3.5 px-3 text-left transition-all duration-200 flex items-center justify-between cursor-pointer rounded-lg ${
+                    isActive ? 'bg-[#E8E4D9]/60' : 'hover:bg-[#E8E4D9]/30'
+                  }`}
                 >
-                  <span className="w-1 h-1.5 rounded-full bg-[#FF3B1F] shadow-[0_0_6px_#FF3B1F] animate-scroll-wheel" />
-                </span>
-
-                {/* Tiny Label with tracked typography & animated micro arrow */}
-                <span className="flex items-center gap-1.5 font-mono text-[9.5px] tracking-[0.22em] uppercase text-[#9C978E] group-hover:text-[#F1ECE2] transition-colors">
-                  <span>Scroll down to progress</span>
-                  <span className="text-[10px] text-[#FF3B1F] inline-block group-hover:translate-y-0.5 transition-transform duration-200">↓</span>
-                </span>
-              </button>
-
-              {/* Right: Chapter tracker with active index pill */}
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-[10px] tracking-widest text-[#9C978E]">
-                  0{activeChapter + 1} <span className="text-white/20">/</span> 06
-                </span>
-                <div className="flex items-center gap-1.5" role="tablist" aria-label="Chapter progress">
-                  {services.map((svc, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleJumpToChapter(idx)}
-                      title={`Jump to Chapter 0${idx + 1}: ${svc.title}`}
-                      className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                        activeChapter === idx
-                          ? 'w-7 bg-[#FF3B1F] shadow-[0_0_8px_rgba(255,59,31,0.6)]'
-                          : 'w-2 bg-white/20 hover:bg-white/40'
-                      }`}
-                      aria-label={`Chapter 0${idx + 1}: ${svc.title}`}
+                  {/* Left indicator bar for active row */}
+                  {isActive && (
+                    <span
+                      className="absolute left-0 top-1.5 bottom-1.5 w-1.5 bg-[#C8F53C] rounded-r"
+                      aria-hidden="true"
                     />
+                  )}
+
+                  <div className="flex items-center gap-3.5 pl-1.5">
+                    <span
+                      className={`font-mono text-xs font-semibold ${
+                        isActive ? 'text-[#0C0D0F]' : 'text-[#5A584F]'
+                      }`}
+                    >
+                      {service.number}
+                    </span>
+                    <span
+                      className={`font-display text-lg md:text-xl transition-colors ${
+                        isActive
+                          ? 'font-extrabold text-[#0C0D0F]'
+                          : 'font-bold text-[#0C0D0F]/75 group-hover:text-[#0C0D0F]'
+                      }`}
+                    >
+                      {service.name}
+                    </span>
+                  </div>
+
+                  <span
+                    className={`font-body text-base transition-transform duration-200 ${
+                      isActive ? 'translate-x-1 text-[#0C0D0F]' : 'text-[#5A584F] group-hover:translate-x-1'
+                    }`}
+                  >
+                    →
+                  </span>
+
+                  {/* Auto-advance progress line on active item */}
+                  {isActive && (
+                    <div
+                      ref={progressBarRef}
+                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#C8F53C]"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Right 60% (cols 6-12): Detail panel for active service */}
+          <div
+            ref={panelRef}
+            id={`service-panel-${activeIndex}`}
+            role="tabpanel"
+            aria-labelledby={`service-tab-${activeIndex}`}
+            className="col-span-7 bg-[#E8E4D9]/40 border border-[#0C0D0F]/12 rounded-2xl p-5 lg:p-6 flex flex-col gap-5"
+          >
+            {/* Top Photo (16:9 aspect ratio) with clip-path wipe reveal */}
+            <div
+              ref={photoWrapperRef}
+              className="relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-[#0C0D0F] shadow-sm will-change-transform"
+            >
+              <img
+                ref={photoRef}
+                src={PHOTOS[activeService.photoKey]}
+                alt={activeService.name}
+                className="w-full h-full object-cover will-change-transform"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+              <span className="absolute bottom-3 left-4 px-3 py-1 rounded-full bg-[#0C0D0F]/80 text-[#C8F53C] font-mono text-[11px] font-semibold backdrop-blur-sm">
+                Chapter {activeService.number} // {activeService.name}
+              </span>
+            </div>
+
+            {/* Content text */}
+            <div ref={contentRef} className="flex flex-col gap-4">
+              <h3 className="panel-reveal font-display font-extrabold text-2xl lg:text-3xl text-[#0C0D0F] tracking-tight">
+                {activeService.promise}
+              </h3>
+
+              <p className="panel-reveal font-body text-base text-[#5A584F] leading-relaxed max-w-xl">
+                {activeService.description}
+              </p>
+
+              {/* 2-column checklist of 4 deliverables */}
+              <div className="pt-2">
+                <span className="panel-reveal font-body text-xs font-semibold uppercase tracking-wider text-[#5A584F] block mb-3">
+                  Core Deliverables
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {activeService.deliverables.map((item, dIdx) => (
+                    <div
+                      key={dIdx}
+                      className="panel-reveal flex items-center gap-2.5 font-body text-sm text-[#0C0D0F] font-medium"
+                    >
+                      <span className="w-5 h-5 rounded-full bg-[#C8F53C] text-[#0C0D0F] flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 stroke-[2.5]" />
+                      </span>
+                      <span>{item}</span>
+                    </div>
                   ))}
                 </div>
               </div>
+
+              {/* Action Buttons */}
+              <div className="panel-reveal flex flex-wrap items-center gap-4 pt-4 border-t border-[#0C0D0F]/12 mt-2">
+                <Button
+                  onClick={() => handleQuoteClick(activeService)}
+                  variant="primary"
+                  className="!h-12 !px-6 !text-sm"
+                  ariaLabel={`Get a quote for ${activeService.name}`}
+                >
+                  Get a quote for {activeService.name}
+                </Button>
+
+                <Button
+                  onClick={() => scrollToTarget('#process')}
+                  variant="secondary-paper"
+                  className="!h-12 !px-6 !text-sm"
+                  showArrow={false}
+                  ariaLabel="See how we work"
+                >
+                  See how we work
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      ) : null}
 
-      {/* ========================================================
-          MOBILE VIEW (< 900px) & REDUCED MOTION: STACKED CHAPTERS
-          ======================================================== */}
-      <div className={`px-6 py-20 max-w-5xl mx-auto services-mobile-stage ${prefersReduced ? '!block' : ''}`}>
-        {/* Section Header */}
-        <div className="mb-12">
-          <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] text-[#9C978E] mb-2">
-            <span className="w-2 h-2 rounded-full bg-[#FF3B1F]" />
-            <span>SIGNATURE 02 // SERVICE CHAPTERS</span>
-          </div>
-          <h2 className="font-display text-4xl md:text-5xl text-[#F1ECE2] tracking-tight">
-            Six instruments. <span className="italic">Zero noise.</span>
-          </h2>
-          <p className="mt-3 font-body text-sm text-[#9C978E] max-w-xl">
-            Watch each strategic discipline in active execution. Every demonstration is labeled illustrative and built with pure mathematical clarity.
-          </p>
-          <div className="mt-4 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.2em] text-[#9C978E]/90">
-            <span className="relative w-3 h-4 rounded-full border border-white/25 flex items-start justify-center pt-0.5">
-              <span className="w-1 h-1 rounded-full bg-[#FF3B1F] animate-scroll-wheel" />
-            </span>
-            <span>Scroll down to explore chapters</span>
-            <span className="text-[#FF3B1F]">↓</span>
-          </div>
-        </div>
-
-        {/* Stacked Chapters */}
-        <div className="flex flex-col gap-16">
-          {services.map((svc, idx) => {
-            const isCardActive = mobileActiveMap[idx] || prefersReduced
-            const photoUrl = CHAPTER_PHOTOS[svc.id]
-
+        {/* ========================================================
+            MOBILE VIEW (< 900px): ACCORDION LAYOUT
+            ======================================================== */}
+        <div className="min-[900px]:hidden flex flex-col divide-y divide-[#0C0D0F]/12 border-y border-[#0C0D0F]/12">
+          {SERVICES_CONTENT.map((service, idx) => {
+            const isOpen = mobileOpenIdx === idx
             return (
-              <div
-                key={svc.id}
-                id={`service-chapter-${idx}`}
-                data-chapter-index={idx}
-                className="mobile-chapter-card p-6 md:p-8 rounded-2xl hairline-box bg-[#101013]/70 flex flex-col gap-6"
-              >
-                {/* Chapter Heading */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <div className="flex items-center gap-2 font-mono text-xs text-[#FF3B1F]">
-                    <span>CHAPTER {svc.number}</span>
-                    <span>//</span>
-                    <span className="text-[#9C978E] uppercase">{svc.italicWord}</span>
+              <div key={service.id} className="py-2">
+                <button
+                  type="button"
+                  onClick={() => setMobileOpenIdx(isOpen ? null : idx)}
+                  aria-expanded={isOpen}
+                  className="w-full py-4 flex items-center justify-between text-left group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs font-semibold text-[#5A584F]">
+                      {service.number}
+                    </span>
+                    <span className="font-display font-bold text-xl text-[#0C0D0F]">
+                      {service.name}
+                    </span>
                   </div>
-                  <span className="font-mono text-[10px] text-[#9C978E]">0{idx + 1} / 06</span>
-                </div>
 
-                <div>
-                  <h3 className="font-display text-3xl md:text-4xl text-[#F1ECE2] mb-2">
-                    {svc.title}
-                  </h3>
-                  <p className="font-body text-base text-[#F1ECE2]/80 italic">
-                    "{svc.shortPromise}"
-                  </p>
-                </div>
+                  <ChevronDown
+                    className={`w-5 h-5 text-[#5A584F] transition-transform duration-300 ${
+                      isOpen ? 'rotate-180 text-[#0C0D0F]' : ''
+                    }`}
+                  />
+                </button>
 
-                {/* Mobile Demo Stage */}
-                <div className="relative w-full h-[320px] rounded-xl hairline-box overflow-hidden bg-[#08080A]">
-                  {photoUrl && (
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{
-                        backgroundImage: `url(${photoUrl})`,
-                        filter: 'grayscale(100%) contrast(135%) brightness(25%)',
-                      }}
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#08080A]/95 via-[#08080A]/70 to-[#08080A]/85" />
-                  <div className="relative z-10 w-full h-full p-3 flex items-center justify-center">
-                    {renderDemo(idx, isCardActive)}
+                {isOpen && (
+                  <div className="pb-6 pt-2 flex flex-col gap-4">
+                    <div className="w-full aspect-[16/10] rounded-xl overflow-hidden bg-[#0C0D0F]">
+                      <img
+                        src={PHOTOS[service.photoKey]}
+                        alt={service.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    <h3 className="font-display font-bold text-xl text-[#0C0D0F]">
+                      {service.promise}
+                    </h3>
+                    <p className="font-body text-sm text-[#5A584F]">
+                      {service.description}
+                    </p>
+
+                    <div className="flex flex-col gap-2 pt-2">
+                      <span className="font-body text-xs font-semibold uppercase tracking-wider text-[#5A584F]">
+                        Deliverables
+                      </span>
+                      {service.deliverables.map((item, dIdx) => (
+                        <div
+                          key={dIdx}
+                          className="flex items-center gap-2 text-sm text-[#0C0D0F]"
+                        >
+                          <Check className="w-3.5 h-3.5 text-[#0C0D0F] flex-shrink-0" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-2">
+                      <Button
+                        onClick={() => handleQuoteClick(service)}
+                        variant="primary"
+                        className="w-full !h-12 !text-sm"
+                      >
+                        Get a quote for {service.name}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-
-                {/* Deliverables List */}
-                <div className="pt-2">
-                  <span className="font-mono text-xs uppercase tracking-[0.14em] text-[#9C978E] block mb-2">
-                    DELIVERABLES
-                  </span>
-                  <ul className="space-y-2 font-body text-sm text-[#F1ECE2]/90">
-                    {svc.deliverables.map((item, dIdx) => (
-                      <li key={dIdx} className="flex items-start gap-2">
-                        <span className="text-[#FF3B1F] font-mono text-xs mt-0.5">✦</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Booking Link */}
-                <div className="pt-2 border-t border-white/5">
-                  <a
-                    href={SITE_CONFIG.bookingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.14em] text-[#FF3B1F] hover:text-white transition-colors"
-                  >
-                    <span>Talk about your growth</span>
-                    <span>→</span>
-                  </a>
-                </div>
+                )}
               </div>
             )
           })}
         </div>
-      </div>
-
-      {/* Screen Reader Full Catalog Accessibility */}
-      <div className="sr-only" aria-label="Services Detailed Accessible Catalog">
-        <h3>Services and Strategic Capabilities</h3>
-        <ul>
-          {services.map((svc) => (
-            <li key={`sr-${svc.id}`}>
-              <h4>{svc.number} - {svc.title}</h4>
-              <p>{svc.shortPromise}</p>
-              <ul>
-                {svc.deliverables.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   )

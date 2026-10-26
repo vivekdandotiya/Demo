@@ -12,14 +12,12 @@ export function initLenis(): Lenis | null {
 
   if (lenisInstance) return lenisInstance
 
+  // Gentle setting as required by client specification (lerp ~0.1)
   const lenis = new Lenis({
-    duration: 1.2,
-    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    lerp: 0.1,
     orientation: 'vertical',
     gestureOrientation: 'vertical',
     smoothWheel: true,
-    wheelMultiplier: 1,
-    touchMultiplier: 1.5,
   })
 
   lenisInstance = lenis
@@ -48,11 +46,14 @@ export function startLenis() {
   lenisInstance?.start()
 }
 
-export function scrollToTarget(target: string | number | HTMLElement, options?: { offset?: number; duration?: number }) {
+export function scrollToTarget(
+  target: string | number | HTMLElement,
+  options?: { offset?: number; duration?: number }
+) {
   if (lenisInstance) {
     lenisInstance.scrollTo(target, {
       offset: options?.offset ?? 0,
-      duration: options?.duration ?? 1.4,
+      duration: options?.duration ?? 1.2,
     })
   } else {
     if (typeof target === 'string') {

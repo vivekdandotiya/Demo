@@ -1,28 +1,19 @@
-import React, { useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { initLenis } from './lib/lenis'
-import { WorldCanvas } from './world/WorldCanvas'
-import { Grain } from './components/layout/Grain'
-import { Cursor } from './components/layout/Cursor'
-import { Preloader } from './components/layout/Preloader'
-import { Nav } from './components/layout/Nav'
-import { ProgressBar } from './components/layout/ProgressBar'
+import { Header } from './components/layout/Header'
 import { Hero } from './components/sections/Hero'
-import { Strip } from './components/sections/Strip'
+import { Marquee } from './components/sections/Marquee'
 import { Services } from './components/sections/Services'
+import { Process } from './components/sections/Process'
 import { Work } from './components/sections/Work'
-import { Studio } from './components/sections/Studio'
-import { Industries } from './components/sections/Industries'
-import { Approach } from './components/sections/Approach'
-import { WhyUs } from './components/sections/WhyUs'
-import { Value } from './components/sections/Value'
-import { Toolkit } from './components/sections/Toolkit'
-import { Packages } from './components/sections/Packages'
+import { Proof } from './components/sections/Proof'
 import { Faq } from './components/sections/Faq'
-import { FinalCta } from './components/sections/FinalCta'
-import { Footer } from './components/sections/Footer'
-import { KineticDivider } from './components/ui/KineticDivider'
+import { Contact } from './components/sections/Contact'
+import { Footer } from './components/layout/Footer'
 
 export const App: React.FC = () => {
+  const [selectedService, setSelectedService] = useState<string>('')
+
   useEffect(() => {
     const lenis = initLenis()
 
@@ -32,85 +23,43 @@ export const App: React.FC = () => {
   }, [])
 
   return (
-    <div className="relative min-h-screen bg-[#08080A] text-[#F1ECE2] overflow-x-hidden">
-      {/* Accessible skip link */}
+    <div className="relative min-h-screen bg-[#0C0D0F] text-[#F3F0E8] overflow-x-hidden selection:bg-[#C8F53C] selection:text-[#0C0D0F]">
+      {/* Accessible skip to main content */}
       <a href="#main-content" className="skip-to-content">
         Skip to main content
       </a>
 
-      {/* Global Scroll Progress Line */}
-      <ProgressBar />
+      {/* 1. Header (Sticky, transparent over hero, ink with blur on scroll) */}
+      <Header />
 
-      {/* Persistent WebGL Dull-to-Live World Canvas */}
-      <WorldCanvas />
-
-      {/* Cinema Film Grain */}
-      <Grain />
-
-      {/* Custom Precision Cursor */}
-      <Cursor />
-
-      {/* Preloader with wordmark mask-rise and ignition sync */}
-      <Preloader />
-
-      {/* Fixed Navigation */}
-      <Nav />
-
-      {/* Main Semantic Page Content */}
-      <main id="main-content" className="relative z-10">
-        {/* Signature 1: Hero with Lens & Layered Photo Fragments */}
+      {/* Semantic Main Content Container */}
+      <main id="main-content">
+        {/* 2. Hero: The Campaign Wall */}
         <Hero />
 
-        {/* Velocity-boosted marquee strip */}
-        <Strip />
+        {/* 3. Capability Marquee Strip (Lime) */}
+        <Marquee />
 
-        {/* Signature 2: Physics Services Stage */}
-        <Services />
+        {/* 4. Services Explorer (Paper background, interactive) */}
+        <Services onQuoteService={(serviceName) => setSelectedService(serviceName)} />
 
-        {/* Kinetic Divider 1 */}
-        <KineticDivider
-          word="STANDARDS"
-          subline="WHERE ART DIRECTION MEETS CONVERSION CAPITAL"
-        />
+        {/* 5. Process (Ink background, 4 steps & 3 commitments) */}
+        <Process />
 
-        {/* Signature 3: Velocity Warp Selected Work with Real Photography */}
+        {/* 6. Selected Work (Paper background, editorial cards with modal dialog) */}
         <Work />
 
-        {/* New: Studio & Craft Editorial Photo Mosaic */}
-        <Studio />
+        {/* 7. Proof (Conditional: only renders if proof data is non-empty) */}
+        <Proof />
 
-        {/* New: Industries We Grow (Interactive full-bleed photo reel) */}
-        <Industries />
-
-        {/* Signature 4: Approach Fly-Through with Bone-White Tonal Shock */}
-        <Approach />
-
-        {/* New: Why Us (4 Operating Pillars with Photo-Type Compositions) */}
-        <WhyUs />
-
-        {/* Value Section (Qualitative Leverage + Compounding Curve) */}
-        <Value />
-
-        {/* New: Toolkit & Channels (Distribution Quadrants) */}
-        <Toolkit />
-
-        {/* New: Packages & Engagement Models */}
-        <Packages />
-
-        {/* Kinetic Divider 2 */}
-        <KineticDivider
-          word="UNMISSABLE"
-          subline="FROM INVISIBLE TO PERMANENTLY UNMISSABLE"
-        />
-
-        {/* New: FAQ Accordion */}
+        {/* 8. FAQ (Paper 2 background, 5 questions accordion) */}
         <Faq />
 
-        {/* Signature 5: The Bloom, Full-Bleed Atmosphere, Magnetic CTA & Proposal Form */}
-        <FinalCta />
+        {/* 9. Contact (Ink background, working form & agency details) */}
+        <Contact preSelectedService={selectedService} />
       </main>
 
-      {/* Global Semantic Footer */}
+      {/* 10. Footer (Compact ink) */}
       <Footer />
     </div>
   )
