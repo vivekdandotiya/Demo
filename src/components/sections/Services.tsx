@@ -31,6 +31,35 @@ export const Services: React.FC = () => {
 
   const services = SITE_CONFIG.services
 
+  const handleAdvanceChapter = () => {
+    const container = containerRef.current
+    if (!container) return
+    const totalChapters = services.length
+    const nextIdx = Math.min(totalChapters - 1, activeChapter + 1)
+    const lenis = getLenis()
+    const rect = container.getBoundingClientRect()
+    const targetScroll = window.scrollY + rect.top + (nextIdx / totalChapters) * (container.offsetHeight - window.innerHeight)
+    if (lenis) {
+      lenis.scrollTo(targetScroll, { duration: 0.8 })
+    } else {
+      window.scrollTo({ top: targetScroll, behavior: 'smooth' })
+    }
+  }
+
+  const handleJumpToChapter = (idx: number) => {
+    const container = containerRef.current
+    if (!container) return
+    const totalChapters = services.length
+    const lenis = getLenis()
+    const rect = container.getBoundingClientRect()
+    const targetScroll = window.scrollY + rect.top + (idx / totalChapters) * (container.offsetHeight - window.innerHeight)
+    if (lenis) {
+      lenis.scrollTo(targetScroll, { duration: 0.9 })
+    } else {
+      window.scrollTo({ top: targetScroll, behavior: 'smooth' })
+    }
+  }
+
   // Desktop ScrollTrigger Pinning
   useEffect(() => {
     if (prefersReduced || typeof window === 'undefined') return
@@ -310,17 +339,50 @@ export const Services: React.FC = () => {
             </div>
 
             {/* Bottom Scrubber & Section Indicator */}
-            <div className="flex items-center justify-between border-t border-white/10 pt-3 font-mono text-[11px] text-[#9C978E]">
-              <span>SCROLL DOWN TO PROGRESS CHAPTERS</span>
-              <div className="flex gap-1.5">
-                {services.map((_, idx) => (
-                  <span
-                    key={idx}
-                    className={`h-1 rounded-full transition-all duration-300 ${
-                      activeChapter === idx ? 'w-6 bg-[#FF3B1F]' : 'w-2 bg-white/20'
-                    }`}
-                  />
-                ))}
+            <div className="flex items-center justify-between border-t border-white/10 pt-3.5 select-none">
+              {/* Left: Refined micro scroll-down cue */}
+              <button
+                type="button"
+                onClick={handleAdvanceChapter}
+                className="flex items-center gap-2.5 px-2.5 py-1 -ml-2.5 rounded-full hover:bg-white/[0.04] transition-all duration-200 group text-left cursor-pointer border border-transparent hover:border-white/10"
+                aria-label="Scroll down to advance to next service chapter"
+              >
+                {/* Micro Mouse / Pill Capsule */}
+                <span 
+                  className="relative w-3.5 h-5 rounded-full border border-white/30 group-hover:border-[#FF3B1F] transition-colors flex items-start justify-center pt-1 bg-white/[0.03] shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+                  aria-hidden="true"
+                >
+                  <span className="w-1 h-1.5 rounded-full bg-[#FF3B1F] shadow-[0_0_6px_#FF3B1F] animate-scroll-wheel" />
+                </span>
+
+                {/* Tiny Label with tracked typography & animated micro arrow */}
+                <span className="flex items-center gap-1.5 font-mono text-[9.5px] tracking-[0.22em] uppercase text-[#9C978E] group-hover:text-[#F1ECE2] transition-colors">
+                  <span>Scroll down to progress</span>
+                  <span className="text-[10px] text-[#FF3B1F] inline-block group-hover:translate-y-0.5 transition-transform duration-200">↓</span>
+                </span>
+              </button>
+
+              {/* Right: Chapter tracker with active index pill */}
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[10px] tracking-widest text-[#9C978E]">
+                  0{activeChapter + 1} <span className="text-white/20">/</span> 06
+                </span>
+                <div className="flex items-center gap-1.5" role="tablist" aria-label="Chapter progress">
+                  {services.map((svc, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleJumpToChapter(idx)}
+                      title={`Jump to Chapter 0${idx + 1}: ${svc.title}`}
+                      className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                        activeChapter === idx
+                          ? 'w-7 bg-[#FF3B1F] shadow-[0_0_8px_rgba(255,59,31,0.6)]'
+                          : 'w-2 bg-white/20 hover:bg-white/40'
+                      }`}
+                      aria-label={`Chapter 0${idx + 1}: ${svc.title}`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -343,6 +405,13 @@ export const Services: React.FC = () => {
           <p className="mt-3 font-body text-sm text-[#9C978E] max-w-xl">
             Watch each strategic discipline in active execution. Every demonstration is labeled illustrative and built with pure mathematical clarity.
           </p>
+          <div className="mt-4 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.2em] text-[#9C978E]/90">
+            <span className="relative w-3 h-4 rounded-full border border-white/25 flex items-start justify-center pt-0.5">
+              <span className="w-1 h-1 rounded-full bg-[#FF3B1F] animate-scroll-wheel" />
+            </span>
+            <span>Scroll down to explore chapters</span>
+            <span className="text-[#FF3B1F]">↓</span>
+          </div>
         </div>
 
         {/* Stacked Chapters */}

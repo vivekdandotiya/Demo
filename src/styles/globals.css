@@ -225,6 +225,26 @@ html.lenis, html.lenis body {
   background: var(--color-signal);
 }
 
+/* Micro scroll wheel animation */
+@keyframes scrollWheelNudge {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(5px);
+    opacity: 0.25;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-scroll-wheel {
+  animation: scrollWheelNudge 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
 /* Services Chapters Responsive Modes */
 @media (min-width: 900px) {
   .services-desktop-stage {
