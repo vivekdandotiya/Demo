@@ -7,6 +7,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion'
 interface CampaignWallProps {
   onPosterHover?: (isHovered: boolean) => void
   inScreen?: boolean
+  fullBleed?: boolean
   columnsCount?: number
   speedMultiplier?: number
   className?: string
@@ -15,6 +16,7 @@ interface CampaignWallProps {
 export const CampaignWall: React.FC<CampaignWallProps> = ({
   onPosterHover,
   inScreen = false,
+  fullBleed = false,
   columnsCount = 5,
   speedMultiplier = 1,
   className = '',
@@ -111,36 +113,40 @@ export const CampaignWall: React.FC<CampaignWallProps> = ({
     onPosterHover?.(false)
   }
 
-  if (inScreen) {
+  if (fullBleed) {
     return (
       <div
         ref={containerRef}
-        className={`w-full h-full p-4 sm:p-6 bg-[#0C0D0F] overflow-hidden select-none ${className}`}
+        className={`campaign-wall-fullbleed w-full h-full relative overflow-hidden bg-[#0C0D0F] flex items-center justify-center select-none ${className}`}
       >
-        <div className={`grid grid-cols-${columnsCount} gap-4 h-[180%] -mt-12 overflow-hidden`}>
-          {columnsData.map((col, colIdx) => (
-            <div
-              key={colIdx}
-              className="flex flex-col gap-4 will-change-transform"
-              onMouseEnter={() => handleMouseEnterColumn(colIdx)}
-              onMouseLeave={() => handleMouseLeaveColumn(colIdx)}
-            >
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-8 h-full flex items-center justify-center">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5 w-full h-[150vh] overflow-hidden">
+            {columnsData.map((col, colIdx) => (
               <div
-                ref={(el) => {
-                  columnsRef.current[colIdx] = el
-                }}
-                className="flex flex-col gap-4"
+                key={colIdx}
+                className={`flex flex-col gap-4 md:gap-5 will-change-transform ${
+                  colIdx === 3 ? 'hidden md:flex' : ''
+                } ${colIdx === 4 ? 'hidden lg:flex' : ''}`}
+                onMouseEnter={() => handleMouseEnterColumn(colIdx)}
+                onMouseLeave={() => handleMouseLeaveColumn(colIdx)}
               >
-                {[...col.items, ...col.items].map((poster, pIdx) => (
-                  <Poster
-                    key={`screen-${colIdx}-${pIdx}-${poster.id}`}
-                    poster={poster}
-                    priority={colIdx === 0 && pIdx === 0}
-                  />
-                ))}
+                <div
+                  ref={(el) => {
+                    columnsRef.current[colIdx] = el
+                  }}
+                  className="flex flex-col gap-4 md:gap-5"
+                >
+                  {[...col.items, ...col.items].map((poster, pIdx) => (
+                    <Poster
+                      key={`fullbleed-${colIdx}-${pIdx}-${poster.id}`}
+                      poster={poster}
+                      priority={colIdx < 2 && pIdx === 0}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     )

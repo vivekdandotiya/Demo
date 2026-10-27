@@ -23,7 +23,7 @@ export const App: React.FC = () => {
   }, [])
 
   return (
-    <div className="relative min-h-screen bg-[#0C0D0F] text-[#F3F0E8] overflow-x-hidden selection:bg-[#C8F53C] selection:text-[#0C0D0F]">
+    <div className="relative min-h-screen bg-[#0C0D0F] text-[#F3F0E8] overflow-x-clip selection:bg-[#C8F53C] selection:text-[#0C0D0F]">
       {/* Accessible skip to main content */}
       <a href="#main-content" className="skip-to-content">
         Skip to main content

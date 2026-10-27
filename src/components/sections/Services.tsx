@@ -128,7 +128,7 @@ export const Services: React.FC<ServicesProps> = ({ onQuoteService }) => {
   return (
     <section
       id="services"
-      className="relative w-full py-11 md:py-13 bg-[#F3F0E8] text-[#0C0D0F] on-paper z-20 rounded-t-[28px] -mt-7 shadow-[0_-12px_32px_rgba(0,0,0,0.22)]"
+      className="relative w-full py-11 md:py-13 bg-[#F3F0E8] text-[#0C0D0F] on-paper z-20"
       aria-labelledby="services-heading"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-10">

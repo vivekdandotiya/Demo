@@ -1,31 +1,17 @@
-import { Point } from '../lib/homography'
-
 export interface HeroConfig {
-  screenQuad: {
-    topLeft: Point
-    topRight: Point
-    bottomRight: Point
-    bottomLeft: Point
-  }
-  screenDimensions: {
-    width: number
-    height: number
+  screenCenter: {
+    x: number
+    y: number
   }
 }
 
 /**
- * Measured percentage coordinates (0-100%) of the laptop screen corners
- * in the master cinematic plate.
+ * Screen center percentage coordinates of the laptop screen
+ * used as the unified transform-origin for all camera zoom and bloom layers.
  */
 export const HERO_CONFIG: HeroConfig = {
-  screenQuad: {
-    topLeft: { x: 54.85, y: 65.9 },
-    topRight: { x: 63.85, y: 64.2 },
-    bottomRight: { x: 62.8, y: 80.8 },
-    bottomLeft: { x: 55.6, y: 80.8 },
-  },
-  screenDimensions: {
-    width: 1600,
-    height: 1000,
+  screenCenter: {
+    x: 59.4,
+    y: 72.8,
   },
 }

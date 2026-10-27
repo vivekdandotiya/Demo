@@ -153,16 +153,6 @@ export const Header: React.FC = () => {
                 {SITE_CONFIG.name}
               </span>
             </a>
-
-            {/* Desktop "Skip intro" link */}
-            <button
-              type="button"
-              onClick={() => scrollToTarget('#services')}
-              className={`hidden min-[900px]:inline-block font-mono text-[11px] tracking-wider uppercase opacity-60 hover:opacity-100 transition-opacity cursor-pointer ${textMutedClass}`}
-              aria-label="Skip hero intro to services"
-            >
-              Skip intro ↓
-            </button>
           </div>
 
           {/* Desktop Navigation Links */}
