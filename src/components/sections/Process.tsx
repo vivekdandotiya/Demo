@@ -43,7 +43,7 @@ export const Process: React.FC = () => {
     <section
       id="process"
       ref={containerRef}
-      className="relative w-full py-14 md:py-16 bg-[#0C0D0F] text-[#F3F0E8] z-20"
+      className="relative w-full py-11 md:py-13 bg-[#0C0D0F] text-[#F3F0E8] z-20"
       aria-labelledby="process-heading"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-10">

@@ -9,23 +9,29 @@ export const Header: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true)
   const [activeSection, setActiveSection] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isOverPaper, setIsOverPaper] = useState(false)
+  const [scrollProgress, setScrollProgress] = useState(0)
 
   const lastScrollYRef = useRef(0)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
 
-  // Scroll detection: backdrop blur, hide on scroll down, reveal on scroll up
+  // Scroll detection & section tracking
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      const heroHeight = window.innerHeight * 0.85
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+      setScrollProgress(Math.min(1, Math.max(0, currentScrollY / maxScroll)))
 
-      // Solid backdrop after hero
-      setIsScrolled(currentScrollY > 80)
+      const heroEl = document.querySelector('section')
+      const heroHeight = heroEl ? heroEl.offsetHeight : window.innerHeight
+
+      // Solid backdrop after scrolling past top of hero
+      setIsScrolled(currentScrollY > 60)
 
       // Hide header when scrolling down, show when scrolling up
-      if (currentScrollY > heroHeight) {
+      if (currentScrollY > heroHeight * 0.8) {
         if (currentScrollY > lastScrollYRef.current + 10) {
           setIsVisible(false)
         } else if (currentScrollY < lastScrollYRef.current - 10) {
@@ -37,21 +43,39 @@ export const Header: React.FC = () => {
 
       lastScrollYRef.current = currentScrollY
 
-      // Track active section for underline
-      const sections = ['services', 'process', 'work', 'faq', 'contact']
-      for (const sectionId of sections) {
-        const el = document.getElementById(sectionId)
-        if (el) {
-          const rect = el.getBoundingClientRect()
-          if (rect.top <= 200 && rect.bottom >= 200) {
-            setActiveSection(sectionId)
-            break
+      // Bug Fix: Only show an active nav link after its section is actually reached
+      if (currentScrollY < heroHeight * 0.6) {
+        setActiveSection('')
+      } else {
+        const sections = ['services', 'process', 'work', 'faq', 'contact']
+        let currentActive = ''
+        for (const sectionId of sections) {
+          const el = document.getElementById(sectionId)
+          if (el) {
+            const rect = el.getBoundingClientRect()
+            if (rect.top <= 240 && rect.bottom >= 120) {
+              currentActive = sectionId
+              break
+            }
           }
         }
+        setActiveSection(currentActive)
       }
+
+      // Check if header is currently over paper background
+      const paperSections = document.querySelectorAll('.on-paper')
+      let overPaper = false
+      paperSections.forEach((sec) => {
+        const rect = sec.getBoundingClientRect()
+        if (rect.top <= 50 && rect.bottom >= 50) {
+          overPaper = true
+        }
+      })
+      setIsOverPaper(overPaper)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -84,45 +108,62 @@ export const Header: React.FC = () => {
     menuButtonRef.current?.focus()
   }
 
+  // Header dynamic theme classes based on background
+  const textColorClass = isOverPaper && isScrolled ? 'text-[#0C0D0F]' : 'text-[#F3F0E8]'
+  const textMutedClass = isOverPaper && isScrolled ? 'text-[#5A584F]' : 'text-[#A9A69E]'
+  const bgClass = !isScrolled
+    ? 'bg-transparent py-5'
+    : isOverPaper
+    ? 'bg-[#F3F0E8]/94 backdrop-blur-md border-b border-[#0C0D0F]/10 py-3.5 shadow-sm'
+    : 'bg-[#0C0D0F]/92 backdrop-blur-md border-b border-white/10 py-3.5 shadow-[0_4px_24px_rgba(0,0,0,0.4)]'
+
   return (
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isVisible ? 'translate-y-0' : '-translate-y-full'
-        } ${
-          isScrolled
-            ? 'bg-[#0C0D0F]/92 backdrop-blur-md hairline-dark-b py-3.5 shadow-[0_4px_24px_rgba(0,0,0,0.4)]'
-            : 'bg-transparent py-6'
-        }`}
+        } ${bgClass}`}
       >
         <div className="max-w-7xl mx-auto px-6 md:px-10 flex items-center justify-between">
           {/* Wordmark with small lime square mark */}
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault()
-              scrollToTarget(0)
-            }}
-            className="flex items-center gap-2 group cursor-pointer focus-visible:outline-2 focus-visible:outline-[#C8F53C]"
-            aria-label={`${SITE_CONFIG.name} home`}
-          >
-            {/* Lime square SVG mark */}
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="flex-shrink-0 transition-transform duration-300 group-hover:rotate-45"
-              aria-hidden="true"
+          <div className="flex items-center gap-6">
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault()
+                scrollToTarget(0)
+              }}
+              className="flex items-center gap-2 group cursor-pointer focus-visible:outline-2 focus-visible:outline-[#C8F53C]"
+              aria-label={`${SITE_CONFIG.name} home`}
             >
-              <rect width="14" height="14" rx="2" fill="#C8F53C" />
-            </svg>
+              {/* Lime square SVG mark */}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="flex-shrink-0 transition-transform duration-300 group-hover:rotate-45"
+                aria-hidden="true"
+              >
+                <rect width="14" height="14" rx="2" fill="#C8F53C" />
+              </svg>
 
-            <span className="font-display font-bold text-xl md:text-2xl text-[#F3F0E8] tracking-tight">
-              {SITE_CONFIG.name}
-            </span>
-          </a>
+              <span className={`font-display font-bold text-xl md:text-2xl tracking-tight ${textColorClass}`}>
+                {SITE_CONFIG.name}
+              </span>
+            </a>
+
+            {/* Desktop "Skip intro" link */}
+            <button
+              type="button"
+              onClick={() => scrollToTarget('#services')}
+              className={`hidden min-[900px]:inline-block font-mono text-[11px] tracking-wider uppercase opacity-60 hover:opacity-100 transition-opacity cursor-pointer ${textMutedClass}`}
+              aria-label="Skip hero intro to services"
+            >
+              Skip intro ↓
+            </button>
+          </div>
 
           {/* Desktop Navigation Links */}
           <nav
@@ -140,7 +181,9 @@ export const Header: React.FC = () => {
                     scrollToTarget(link.href)
                   }}
                   className={`relative font-body text-sm font-medium transition-colors duration-200 py-1 ${
-                    isActive ? 'text-[#C8F53C]' : 'text-[#A9A69E] hover:text-[#F3F0E8]'
+                    isActive
+                      ? 'text-[#C8F53C] font-semibold'
+                      : `${textMutedClass} hover:${textColorClass}`
                   }`}
                 >
                   {link.label}
@@ -160,7 +203,7 @@ export const Header: React.FC = () => {
             <Button
               href={SITE_CONFIG.bookingUrl}
               variant="primary"
-              className="!h-11 !px-6 !text-xs uppercase tracking-wider"
+              className="!h-10 !px-5 !text-xs uppercase tracking-wider"
               showArrow={false}
               ariaLabel="Book a strategy call"
             >
@@ -173,13 +216,20 @@ export const Header: React.FC = () => {
             ref={menuButtonRef}
             type="button"
             onClick={() => setMobileMenuOpen(true)}
-            className="min-[900px]:hidden p-2 -mr-2 text-[#F3F0E8] hover:text-[#C8F53C] transition-colors focus-visible:outline-2 focus-visible:outline-[#C8F53C]"
+            className={`min-[900px]:hidden p-2 -mr-2 ${textColorClass} hover:text-[#C8F53C] transition-colors focus-visible:outline-2 focus-visible:outline-[#C8F53C]`}
             aria-label="Open menu"
             aria-expanded={mobileMenuOpen}
           >
             <Menu className="w-6 h-6" />
           </button>
         </div>
+
+        {/* 2px lime scroll progress line under header */}
+        <div
+          className="absolute bottom-0 left-0 h-[2px] bg-[#C8F53C] transition-all duration-75"
+          style={{ width: `${scrollProgress * 100}%` }}
+          aria-hidden="true"
+        />
       </header>
 
       {/* Mobile Menu Panel (< 900px) with focus trap & accessible dialog */}

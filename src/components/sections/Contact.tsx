@@ -151,7 +151,7 @@ export const Contact: React.FC<ContactProps> = ({ preSelectedService }) => {
   return (
     <section
       id="contact"
-      className="relative w-full py-14 md:py-16 bg-[#0C0D0F] text-[#F3F0E8] z-20 hairline-dark-t"
+      className="relative w-full py-11 md:py-13 bg-[#0C0D0F] text-[#F3F0E8] z-20 rounded-t-[28px] -mt-7 shadow-[0_-12px_32px_rgba(0,0,0,0.35)]"
       aria-labelledby="contact-heading"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">

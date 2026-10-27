@@ -46,13 +46,13 @@ export const Button: React.FC<ButtonProps> = ({
 
   const content = (
     <>
-      {/* Rolling text container for high-craft feel */}
-      <span className="relative inline-flex flex-col h-[22px] overflow-hidden justify-start">
-        <span className="inline-block transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-full">
+      {/* Rolling text container with exact line-height and absolute duplicate to prevent peek/clipping */}
+      <span className="relative block overflow-hidden h-[1.3em] leading-[1.3em]">
+        <span className="block transform transition-transform duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-full leading-[1.3em]">
           {children}
         </span>
         <span
-          className="inline-block transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-full"
+          className="block absolute top-full left-0 right-0 transform transition-transform duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-full leading-[1.3em]"
           aria-hidden="true"
         >
           {children}

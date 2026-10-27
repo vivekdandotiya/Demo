@@ -8,7 +8,7 @@ export const Faq: React.FC = () => {
   return (
     <section
       id="faq"
-      className="relative w-full py-14 md:py-16 bg-[#E8E4D9] text-[#0C0D0F] on-paper z-20"
+      className="relative w-full py-11 md:py-13 bg-[#E8E4D9] text-[#0C0D0F] on-paper z-20"
       aria-labelledby="faq-heading"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

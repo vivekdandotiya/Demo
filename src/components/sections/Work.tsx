@@ -4,14 +4,68 @@ import { PHOTOS } from '../../assets/photos'
 import { SITE_CONFIG } from '../../config/site'
 import { X, ArrowRight } from 'lucide-react'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
+import { gsap, ScrollTrigger } from '../../lib/gsap'
 
 export const Work: React.FC = () => {
   const [activeProject, setActiveProject] = useState<WorkProject | null>(null)
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 })
   const [isHoveringWork, setIsHoveringWork] = useState(false)
 
+  const sectionRef = useRef<HTMLElement>(null)
   const modalCloseRef = useRef<HTMLButtonElement>(null)
   const prefersReduced = useReducedMotion()
+
+  // Image reveal clip-path and subtle 6% parallax scrub
+  useEffect(() => {
+    if (prefersReduced || typeof window === 'undefined') return
+
+    const section = sectionRef.current
+    if (!section) return
+
+    const ctx = gsap.context(() => {
+      const wrappers = section.querySelectorAll<HTMLElement>('.work-image-wrapper')
+      wrappers.forEach((wrapper) => {
+        const img = wrapper.querySelector<HTMLImageElement>('img')
+
+        // Clip-path wipe reveal (inset 100% to inset 0%)
+        gsap.fromTo(
+          wrapper,
+          { clipPath: 'inset(100% 0% 0% 0%)' },
+          {
+            clipPath: 'inset(0% 0% 0% 0%)',
+            duration: 0.9,
+            ease: 'power3.inOut',
+            scrollTrigger: {
+              trigger: wrapper,
+              start: 'top 85%',
+              toggleActions: 'play none none none',
+            },
+          }
+        )
+
+        // Subtle ~6% inner parallax scrub
+        if (img) {
+          gsap.fromTo(
+            img,
+            { yPercent: -6, scale: 1.08 },
+            {
+              yPercent: 6,
+              scale: 1.0,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: wrapper,
+                start: 'top bottom',
+                end: 'bottom top',
+                scrub: 0.5,
+              },
+            }
+          )
+        }
+      })
+    }, section)
+
+    return () => ctx.revert()
+  }, [prefersReduced])
 
   // Track cursor position for the "View" bubble (desktop only)
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -47,8 +101,9 @@ export const Work: React.FC = () => {
 
   return (
     <section
+      ref={sectionRef}
       id="work"
-      className="relative w-full py-14 md:py-16 bg-[#F3F0E8] text-[#0C0D0F] on-paper z-20"
+      className="relative w-full py-11 md:py-13 bg-[#F3F0E8] text-[#0C0D0F] on-paper z-20 rounded-t-[28px] -mt-7 shadow-[0_-12px_32px_rgba(0,0,0,0.22)]"
       aria-labelledby="work-heading"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-10">
@@ -117,12 +172,12 @@ export const Work: React.FC = () => {
               >
                 {/* Image Container */}
                 <div
-                  className={`relative w-full ${aspectClass} rounded-2xl overflow-hidden bg-[#0C0D0F] shadow-sm border border-[#0C0D0F]/10`}
+                  className={`work-image-wrapper relative w-full ${aspectClass} rounded-2xl overflow-hidden bg-[#0C0D0F] shadow-sm border border-[#0C0D0F]/10`}
                 >
                   <img
                     src={PHOTOS[project.photoKey]}
                     alt={`${project.name} creative direction`}
-                    className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105 will-change-transform"
                   />
 
                   {/* Dark subtle vignette */}
